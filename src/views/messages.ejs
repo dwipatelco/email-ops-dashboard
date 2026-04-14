@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Messages</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <%- include("partials/header") %>
+    <main class="page-shell">
+      <section class="filters-card">
+        <h2>Search Mail Traffic</h2>
+        <form method="get" action="/messages" class="filter-grid">
+          <label>
+            Mailbox
+            <select name="mailboxId">
+              <option value="">All</option>
+              <% for (const mailbox of mailboxes) { %>
+                <option value="<%= mailbox.id %>" <%= Number(filters.mailboxId) === mailbox.id ? 'selected' : '' %>><%= mailbox.email %></option>
+              <% } %>
+            </select>
+          </label>
+          <label>
+            Direction
+            <select name="direction">
+              <option value="">All</option>
+              <option value="incoming" <%= filters.direction === 'incoming' ? 'selected' : '' %>>Incoming</option>
+              <option value="outgoing" <%= filters.direction === 'outgoing' ? 'selected' : '' %>>Outgoing</option>
+            </select>
+          </label>
+          <label>
+            Search
+            <input type="text" name="search" value="<%= filters.search ?? '' %>" placeholder="Subject, sender, recipient, body" />
+          </label>
+          <label>
+            From Date
+            <input type="date" name="fromDate" value="<%= filters.fromDate ?? '' %>" />
+          </label>
+          <label>
+            To Date
+            <input type="date" name="toDate" value="<%= filters.toDate ?? '' %>" />
+          </label>
+          <div class="filter-actions">
+            <button type="submit">Apply Filters</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="sync-summary">
+        <h3>Recent Sync Runs</h3>
+        <ul class="sync-run-list">
+          <% for (const run of syncRuns) { %>
+            <li>
+              Mailbox #<%= run.mailboxId %> · <strong><%= run.status %></strong> · in <%= run.incomingCount %> / out <%= run.outgoingCount %>
+              <% if (run.errorMessage) { %> · <%= run.errorMessage %><% } %>
+            </li>
+          <% } %>
+        </ul>
+      </section>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Mailbox</th>
+            <th>Direction</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Subject</th>
+            <th>Snippet</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% for (const message of messages) { %>
+            <tr>
+              <td><%= message.receivedAt ?? message.sentAt ?? message.syncedAt %></td>
+              <td><%= message.mailboxEmail %></td>
+              <td><span class="status-pill status-<%= message.direction %>"><%= message.direction %></span></td>
+              <td><%= message.fromContacts.map((contact) => contact.address).join(', ') %></td>
+              <td><%= message.toContacts.map((contact) => contact.address).join(', ') %></td>
+              <td><a href="/messages/<%= message.id %>"><%= message.subject ?? '(no subject)' %></a></td>
+              <td><%= message.snippet ?? '' %></td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mail Monitor Login</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body class="login-shell">
+    <main class="login-card">
+      <h1>Mail Monitor</h1>
+      <p>Read-only access to monitored inbox and sent activity.</p>
+      <% if (error) { %>
+        <div class="error-banner"><%= error %></div>
+      <% } %>
+      <form method="post" action="/login" class="stack-form">
+        <label>
+          Username
+          <input type="text" name="username" required />
+        </label>
+        <label>
+          Password
+          <input type="password" name="password" required />
+        </label>
+        <button type="submit">Login</button>
+      </form>
+    </main>
+  </body>
+</html>

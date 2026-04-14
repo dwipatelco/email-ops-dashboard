@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mailboxes</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <%- include("partials/header") %>
+    <main class="page-shell">
+      <div class="page-actions">
+        <h2>Monitored Mailboxes</h2>
+        <a class="button-link" href="/mailboxes/new">Add Mailbox</a>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Host</th>
+            <th>Status</th>
+            <th>Last Finished</th>
+            <th>Last Error</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% for (const mailbox of mailboxes) { %>
+            <tr>
+              <td><%= mailbox.email %></td>
+              <td><%= mailbox.host %>:<%= mailbox.port %></td>
+              <td><span class="status-pill status-<%= mailbox.status %>"><%= mailbox.status %></span></td>
+              <td><%= mailbox.lastSyncFinishedAt ?? "-" %></td>
+              <td><%= mailbox.lastSyncError ?? "-" %></td>
+              <td class="row-actions">
+                <form method="post" action="/mailboxes/<%= mailbox.id %>/sync">
+                  <button type="submit">Sync</button>
+                </form>
+                <a class="button-link secondary" href="/mailboxes/<%= mailbox.id %>/edit">Edit</a>
+                <form method="post" action="/mailboxes/<%= mailbox.id %>/delete" onsubmit="return confirm('Delete this mailbox?');">
+                  <button type="submit" class="danger">Delete</button>
+                </form>
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

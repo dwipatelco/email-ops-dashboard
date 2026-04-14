@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= message.subject ?? 'Message Detail' %></title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <%- include("partials/header") %>
+    <main class="page-shell narrow">
+      <article class="message-card">
+        <h2><%= message.subject ?? '(no subject)' %></h2>
+        <dl class="message-meta">
+          <dt>Mailbox</dt>
+          <dd><%= message.mailboxEmail %></dd>
+          <dt>Direction</dt>
+          <dd><%= message.direction %></dd>
+          <dt>Folder</dt>
+          <dd><%= message.folderName %></dd>
+          <dt>From</dt>
+          <dd><%= message.fromContacts.map((contact) => contact.address).join(', ') %></dd>
+          <dt>To</dt>
+          <dd><%= message.toContacts.map((contact) => contact.address).join(', ') %></dd>
+          <dt>CC</dt>
+          <dd><%= message.ccContacts.map((contact) => contact.address).join(', ') || '-' %></dd>
+          <dt>BCC</dt>
+          <dd><%= message.bccContacts.map((contact) => contact.address).join(', ') || '-' %></dd>
+          <dt>Sent At</dt>
+          <dd><%= message.sentAt ?? '-' %></dd>
+          <dt>Received At</dt>
+          <dd><%= message.receivedAt ?? '-' %></dd>
+        </dl>
+        <section>
+          <h3>Plain Text Body</h3>
+          <pre class="body-block"><%= message.bodyText ?? '' %></pre>
+        </section>
+        <% if (message.bodyHtml) { %>
+          <section>
+            <h3>HTML Body</h3>
+            <div class="html-preview"><%- message.bodyHtml %></div>
+          </section>
+        <% } %>
+      </article>
+    </main>
+  </body>
+</html>

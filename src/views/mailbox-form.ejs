@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <%- include("partials/header") %>
+    <main class="page-shell narrow">
+      <h2><%= title %></h2>
+      <form method="post" action="<%= action %>" class="stack-form">
+        <label>
+          Mailbox Email
+          <input type="email" name="email" required value="<%= mailbox?.email ?? '' %>" />
+        </label>
+        <label>
+          IMAP Host
+          <input type="text" name="host" required value="<%= mailbox?.host ?? '' %>" />
+        </label>
+        <label>
+          IMAP Port
+          <input type="number" name="port" required value="<%= mailbox?.port ?? 993 %>" />
+        </label>
+        <label class="checkbox-row">
+          <input type="checkbox" name="secure" <%= mailbox?.secure ?? true ? 'checked' : '' %> />
+          Use TLS/SSL
+        </label>
+        <label>
+          Username
+          <input type="text" name="username" required value="<%= mailbox?.username ?? '' %>" />
+        </label>
+        <label>
+          Password <%= mailbox ? '(leave blank to keep current password)' : '' %>
+          <input type="password" name="password" <%= mailbox ? '' : 'required' %> />
+        </label>
+        <button type="submit">Save Mailbox</button>
+      </form>
+    </main>
+  </body>
+</html>
