@@ -62,7 +62,7 @@ export function MessageQuickView({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeSheet()}>
-      <SheetContent className="sm:max-w-[600px]! w-[90vw] flex flex-col p-0">
+      <SheetContent className="sm:max-w-[600px]! w-[90vw] flex flex-col p-0 gap-0!">
         {message && (
           <>
             <SheetHeader className="px-6 py-4 border-b">
