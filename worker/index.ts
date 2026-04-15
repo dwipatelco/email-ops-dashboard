@@ -1,5 +1,5 @@
 import { env } from "../src/lib/server/env";
-import { prisma } from "../src/lib/server/prisma";
+import { prisma } from "../src/lib/db/prisma";
 import { processSyncQueue, queueMailboxSync, recordWorkerHeartbeat } from "../src/lib/server/sync";
 
 let isTicking = false;

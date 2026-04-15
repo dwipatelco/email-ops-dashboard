@@ -3,7 +3,7 @@ import { MailDirection, Prisma, SyncJobStatus, SyncRunStatus } from "../../gener
 import { decryptSecret } from "./crypto";
 import { env } from "./env";
 import { createImapClient, type ImapMailboxClient } from "./mail";
-import { prisma } from "./prisma";
+import { prisma } from "@/lib/db/prisma";
 
 type FolderPlan = {
   folderName: string;
