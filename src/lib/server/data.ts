@@ -31,9 +31,40 @@ function toContactString(value: Prisma.JsonValue): string {
 
 export async function getDashboardData() {
   const [mailboxes, recentMessages, syncRuns, heartbeat] = await Promise.all([
-    prisma.mailbox.findMany({ orderBy: { email: "asc" } }),
-    prisma.message.findMany({ take: 100, orderBy: { syncedAt: "desc" } }),
-    prisma.syncRun.findMany({ take: 20, orderBy: { startedAt: "desc" } }),
+    prisma.mailbox.findMany({
+      orderBy: { email: "asc" },
+      select: {
+        id: true,
+        email: true,
+        host: true,
+        port: true,
+        status: true,
+        lastSyncFinishedAt: true,
+        lastSyncError: true
+      }
+    }),
+    prisma.message.findMany({
+      take: 100,
+      orderBy: { syncedAt: "desc" },
+      select: {
+        direction: true,
+        receivedAt: true,
+        syncedAt: true
+      }
+    }),
+    prisma.syncRun.findMany({
+      take: 20,
+      orderBy: { startedAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        startedAt: true,
+        finishedAt: true,
+        incomingCount: true,
+        outgoingCount: true,
+        errorMessage: true
+      }
+    }),
     prisma.workerHeartbeat.findUnique({ where: { id: "primary" } })
   ]);
 
@@ -106,11 +137,31 @@ export async function getMessages(filters: MessageFilterInput) {
   const [messages, mailboxes] = await Promise.all([
     prisma.message.findMany({
       where,
-      include: { mailbox: true },
+      select: {
+        id: true,
+        direction: true,
+        subject: true,
+        snippet: true,
+        receivedAt: true,
+        fromJson: true,
+        toJson: true,
+        mailbox: {
+          select: {
+            id: true,
+            email: true
+          }
+        }
+      },
       orderBy: [{ receivedAt: "desc" }, { syncedAt: "desc" }],
       take: 400
     }),
-    prisma.mailbox.findMany({ orderBy: { email: "asc" } })
+    prisma.mailbox.findMany({
+      orderBy: { email: "asc" },
+      select: {
+        id: true,
+        email: true
+      }
+    })
   ]);
 
   return {
@@ -133,8 +184,39 @@ export async function getMessageDetail(id: string) {
 export async function getSystemStatus() {
   const [heartbeat, jobs, runs] = await Promise.all([
     prisma.workerHeartbeat.findUnique({ where: { id: "primary" } }),
-    prisma.syncJob.findMany({ take: 30, orderBy: { createdAt: "desc" }, include: { mailbox: true } }),
-    prisma.syncRun.findMany({ take: 30, orderBy: { startedAt: "desc" }, include: { mailbox: true } })
+    prisma.syncJob.findMany({
+      take: 30,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        reason: true,
+        createdAt: true,
+        mailbox: {
+          select: {
+            email: true
+          }
+        }
+      }
+    }),
+    prisma.syncRun.findMany({
+      take: 30,
+      orderBy: { startedAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        startedAt: true,
+        finishedAt: true,
+        incomingCount: true,
+        outgoingCount: true,
+        errorMessage: true,
+        mailbox: {
+          select: {
+            email: true
+          }
+        }
+      }
+    })
   ]);
 
   return { heartbeat, jobs, runs };

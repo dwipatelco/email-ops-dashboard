@@ -2,6 +2,8 @@ import { env } from "../src/lib/server/env";
 import { prisma } from "../src/lib/server/prisma";
 import { processSyncQueue, queueMailboxSync, recordWorkerHeartbeat } from "../src/lib/server/sync";
 
+let isTicking = false;
+
 async function ensureScheduledJobs() {
   const mailboxes = await prisma.mailbox.findMany({ select: { id: true } });
   for (const mailbox of mailboxes) {
@@ -21,15 +23,24 @@ async function ensureScheduledJobs() {
 }
 
 async function tick() {
-  await recordWorkerHeartbeat("tick-start");
-  await ensureScheduledJobs();
-
-  let processed = true;
-  while (processed) {
-    processed = await processSyncQueue();
+  if (isTicking) {
+    return;
   }
 
-  await recordWorkerHeartbeat("idle");
+  isTicking = true;
+  await recordWorkerHeartbeat("tick-start");
+  try {
+    await ensureScheduledJobs();
+
+    let processed = true;
+    while (processed) {
+      processed = await processSyncQueue();
+    }
+
+    await recordWorkerHeartbeat("idle");
+  } finally {
+    isTicking = false;
+  }
 }
 
 async function loop() {

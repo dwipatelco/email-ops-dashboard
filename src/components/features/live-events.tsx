@@ -5,6 +5,7 @@ import { useRef } from "react";
 
 export function LiveEvents({ onRefresh }: { onRefresh: () => void }) {
   const lastVersionRef = useRef<string | null>(null);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const source = new EventSource("/api/events");
@@ -15,13 +16,23 @@ export function LiveEvents({ onRefresh }: { onRefresh: () => void }) {
       }
 
       lastVersionRef.current = nextVersion;
-      onRefresh();
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+
+      // Coalesce bursty SSE updates into a single refresh.
+      refreshTimeoutRef.current = setTimeout(() => {
+        onRefresh();
+      }, 120);
     };
-    source.onerror = () => {
+    source.onerror = () => {};
+
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
       source.close();
     };
-
-    return () => source.close();
   }, [onRefresh]);
 
   return null;
