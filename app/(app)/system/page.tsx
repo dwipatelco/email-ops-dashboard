@@ -1,7 +1,21 @@
 import { formatDistanceToNow } from "date-fns";
 
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { SyncJobStatusBadge, SyncRunStatusBadge } from "@/components/features/status-badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { getSystemStatus } from "@/lib/server/data";
 
 export const dynamic = "force-dynamic";
@@ -10,34 +24,84 @@ export default async function SystemPage() {
   const data = await getSystemStatus();
 
   return (
-    <>
+    <div className="flex flex-col gap-4">
       <Card>
-        <h2 className="text-xl font-semibold">Worker Health</h2>
-        <p className="mt-2 text-sm text-stone-700">
-          Last heartbeat: {data.heartbeat ? formatDistanceToNow(data.heartbeat.lastSeenAt, { addSuffix: true }) : "No heartbeat yet"}
-        </p>
-        <p className="mt-1 text-sm text-stone-700">Current state: {data.heartbeat?.currentState ?? "unknown"}</p>
+        <CardHeader>
+          <CardTitle>Worker Health</CardTitle>
+          <CardDescription>
+            Last heartbeat: {data.heartbeat ? formatDistanceToNow(data.heartbeat.lastSeenAt, { addSuffix: true }) : "No heartbeat yet"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Current state: {data.heartbeat?.currentState ?? "unknown"}</p>
+        </CardContent>
       </Card>
 
       <Card>
-        <h2 className="text-xl font-semibold">Recent Sync Jobs</h2>
-        <div className="mt-4 space-y-2">
-          {data.jobs.map((job) => (
-            <div key={job.id} className="rounded-2xl border border-stone-200 p-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{job.mailbox.email}</span>
-                <Badge
-                  label={job.status}
-                  tone={job.status === "failed" ? "error" : job.status === "running" ? "syncing" : "ok"}
-                />
-              </div>
-              <p className="mt-1 text-xs text-stone-600">
-                {job.reason} · {formatDistanceToNow(job.createdAt, { addSuffix: true })}
-              </p>
-            </div>
-          ))}
-        </div>
+        <CardHeader>
+          <CardTitle>Recent Sync Jobs</CardTitle>
+          <CardDescription>Queue and execution status for mailbox sync jobs.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Mailbox</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Created</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.jobs.map((job) => (
+                <TableRow key={job.id}>
+                  <TableCell>{job.mailbox.email}</TableCell>
+                  <TableCell>
+                    <SyncJobStatusBadge status={job.status} />
+                  </TableCell>
+                  <TableCell>{job.reason}</TableCell>
+                  <TableCell>{formatDistanceToNow(job.createdAt, { addSuffix: true })}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
       </Card>
-    </>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Sync Runs</CardTitle>
+          <CardDescription>Execution outcomes and traffic volume per run.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Mailbox</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Started</TableHead>
+                <TableHead>Incoming</TableHead>
+                <TableHead>Outgoing</TableHead>
+                <TableHead>Error</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.runs.map((run) => (
+                <TableRow key={run.id}>
+                  <TableCell>{run.mailbox.email}</TableCell>
+                  <TableCell>
+                    <SyncRunStatusBadge status={run.status} />
+                  </TableCell>
+                  <TableCell>{formatDistanceToNow(run.startedAt, { addSuffix: true })}</TableCell>
+                  <TableCell>{run.incomingCount}</TableCell>
+                  <TableCell>{run.outgoingCount}</TableCell>
+                  <TableCell className="max-w-[30ch] truncate text-muted-foreground">{run.errorMessage ?? "-"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

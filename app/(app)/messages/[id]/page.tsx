@@ -1,6 +1,13 @@
 import { notFound } from "next/navigation";
 
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import { DirectionBadge } from "@/components/features/status-badge";
 import { prisma } from "@/lib/server/prisma";
 import { requireSession } from "@/lib/server/session";
 
@@ -47,34 +54,53 @@ export default async function MessageDetailPage({ params }: { params: Promise<{ 
   });
 
   return (
-    <Card>
-      <h2 className="text-2xl font-semibold">{message.subject ?? "(no subject)"}</h2>
-      <dl className="mt-4 grid gap-2 text-sm md:grid-cols-[140px_1fr]">
-        <dt className="text-stone-600">Mailbox</dt>
-        <dd>{message.mailbox.email}</dd>
-        <dt className="text-stone-600">Direction</dt>
-        <dd>{message.direction}</dd>
-        <dt className="text-stone-600">From</dt>
-        <dd>{formatContacts(message.fromJson)}</dd>
-        <dt className="text-stone-600">To</dt>
-        <dd>{formatContacts(message.toJson)}</dd>
-        <dt className="text-stone-600">Received</dt>
-        <dd>{message.receivedAt?.toISOString() ?? "-"}</dd>
-      </dl>
-      <div className="mt-6 space-y-4">
-        <section>
-          <h3 className="mb-2 text-lg font-semibold">Plain Text</h3>
-          <pre className="overflow-x-auto rounded-2xl border border-stone-200 bg-stone-100 p-4 text-sm whitespace-pre-wrap">
-            {message.bodyText ?? ""}
-          </pre>
-        </section>
-        {message.bodyHtml ? (
-          <section>
-            <h3 className="mb-2 text-lg font-semibold">HTML Body</h3>
-            <article className="prose max-w-none rounded-2xl border border-stone-200 bg-white p-4" dangerouslySetInnerHTML={{ __html: message.bodyHtml }} />
-          </section>
-        ) : null}
-      </div>
-    </Card>
+    <div className="flex flex-col gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>{message.subject ?? "(no subject)"}</CardTitle>
+          <CardDescription>Mailbox: {message.mailbox.email}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 text-sm md:grid-cols-2">
+            <MetaItem label="Direction" value={<DirectionBadge direction={message.direction} />} />
+            <MetaItem label="Received" value={message.receivedAt?.toISOString() ?? "-"} />
+            <MetaItem label="From" value={formatContacts(message.fromJson)} />
+            <MetaItem label="To" value={formatContacts(message.toJson)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Plain Text Body</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <pre className="overflow-x-auto rounded-2xl border bg-muted/50 p-4 text-sm whitespace-pre-wrap">{message.bodyText ?? ""}</pre>
+        </CardContent>
+      </Card>
+
+      {message.bodyHtml ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>HTML Body</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <article
+              className="prose max-w-none rounded-2xl border bg-background p-4"
+              dangerouslySetInnerHTML={{ __html: message.bodyHtml }}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+function MetaItem({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-2xl border p-3">
+      <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+      <div>{value}</div>
+    </div>
   );
 }

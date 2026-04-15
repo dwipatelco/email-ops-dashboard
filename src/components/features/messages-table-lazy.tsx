@@ -11,18 +11,22 @@ type MessageRow = {
   subject: string | null;
   snippet: string | null;
   receivedAt: string | null;
+  syncedAt: string;
 };
 
 const DynamicMessagesTable = nextDynamic(
-  () => import("@/components/features/messages-table").then((module) => module.MessagesTable),
+  () =>
+    import("@/components/features/messages-table").then(
+      (module) => module.MessagesTable,
+    ),
   {
     ssr: false,
     loading: () => (
-      <div className="rounded-3xl border border-stone-300 bg-white/95 p-6 text-sm text-stone-600">
+      <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
         Loading message table...
       </div>
-    )
-  }
+    ),
+  },
 );
 
 export function MessagesTableLazy({ rows }: { rows: MessageRow[] }) {

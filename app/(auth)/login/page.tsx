@@ -1,7 +1,14 @@
 import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { getSession } from "@/lib/server/session";
 
@@ -22,31 +29,37 @@ export default async function LoginPage({
   return (
     <main className="min-h-screen px-4 py-12">
       <div className="mx-auto w-full max-w-md">
-        <Card className="space-y-6 p-8">
-          <div>
-            <h1 className="text-3xl font-semibold">Mail Monitor</h1>
-            <p className="mt-2 text-sm text-stone-600">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">Mail Monitor</CardTitle>
+            <CardDescription>
               Sign in with the internal admin account to access mailbox operations.
-            </p>
-          </div>
-          {params.error ? (
-            <div className="rounded-2xl border border-rose-300 bg-rose-100 px-3 py-2 text-sm text-rose-900">
-              Invalid credentials.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-4">
+              {params.error ? (
+                <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  Invalid credentials.
+                </div>
+              ) : null}
+              <form className="flex flex-col gap-4" action={loginAction}>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="username">Username</FieldLabel>
+                    <Input id="username" name="username" required autoComplete="username" />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="password">Password</FieldLabel>
+                    <Input id="password" name="password" type="password" required autoComplete="current-password" />
+                  </Field>
+                </FieldGroup>
+                <Button className="w-full" type="submit">
+                  Sign In
+                </Button>
+              </form>
             </div>
-          ) : null}
-          <form className="space-y-4" action={loginAction}>
-            <label className="block space-y-2 text-sm font-medium">
-              <span>Username</span>
-              <Input name="username" required autoComplete="username" />
-            </label>
-            <label className="block space-y-2 text-sm font-medium">
-              <span>Password</span>
-              <Input name="password" type="password" required autoComplete="current-password" />
-            </label>
-            <Button className="w-full" type="submit">
-              Sign In
-            </Button>
-          </form>
+          </CardContent>
         </Card>
       </div>
     </main>
