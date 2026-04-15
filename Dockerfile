@@ -20,6 +20,7 @@ FROM base AS runner
 
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
+ENV NODE_OPTIONS=--max-old-space-size=1536
 WORKDIR /app
 
 COPY --from=build /app /app
