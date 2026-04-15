@@ -1,4 +1,4 @@
-# Mail Monitor (Next.js + Postgres)
+# Email Ops & Monitoring Dashboard
 
 Internal operations dashboard for monitoring incoming/outgoing company email traffic.
 
@@ -66,6 +66,7 @@ docker run --rm --env-file .env -e APP_ROLE=worker monitor-email
 ```
 
 For Dokploy, deploy two services from the same `Dockerfile`:
+
 - `web` service: `APP_ROLE=web` (or omit it)
 - `worker` service: `APP_ROLE=worker`
 

@@ -309,10 +309,21 @@ export async function getMessageDetail(id: string) {
 }
 
 export async function getSystemStatus() {
-  const [heartbeat, jobs, runs] = await Promise.all([
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const [
+    heartbeat,
+    jobs,
+    runs,
+    queuedJobs,
+    runningJobs,
+    failedJobs24h,
+    failedRuns24h,
+    mailboxes
+  ] = await Promise.all([
     prisma.workerHeartbeat.findUnique({ where: { id: "primary" } }),
     prisma.syncJob.findMany({
-      take: 30,
+      take: 50,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -328,7 +339,7 @@ export async function getSystemStatus() {
       }
     }),
     prisma.syncRun.findMany({
-      take: 30,
+      take: 50,
       orderBy: { startedAt: "desc" },
       select: {
         id: true,
@@ -344,10 +355,33 @@ export async function getSystemStatus() {
           }
         }
       }
+    }),
+    prisma.syncJob.count({ where: { status: "queued" } }),
+    prisma.syncJob.count({ where: { status: "running" } }),
+    prisma.syncJob.count({
+      where: { status: "failed", createdAt: { gte: twentyFourHoursAgo } }
+    }),
+    prisma.syncRun.count({
+      where: { status: "error", startedAt: { gte: twentyFourHoursAgo } }
+    }),
+    prisma.mailbox.findMany({
+      select: { id: true, email: true },
+      orderBy: { email: "asc" }
     })
   ]);
 
-  return { heartbeat, jobs, runs };
+  return {
+    heartbeat,
+    jobs,
+    runs,
+    metrics: {
+      queuedJobs,
+      runningJobs,
+      failedJobs24h,
+      failedRuns24h
+    },
+    mailboxes
+  };
 }
 
 export async function countEventsVersion() {

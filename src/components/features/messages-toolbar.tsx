@@ -63,7 +63,7 @@ export function MessagesToolbar({
       } else {
         params.delete(key);
       }
-      
+
       if (key !== "page") {
         params.set("page", "1");
       }
@@ -72,7 +72,7 @@ export function MessagesToolbar({
         router.push(`${pathname}?${params.toString()}`);
       });
     },
-    [pathname, router, searchParams]
+    [pathname, router, searchParams],
   );
 
   // Debounce search input
@@ -87,7 +87,7 @@ export function MessagesToolbar({
   }, [searchValue, updateParam, currentFilters.search]);
 
   return (
-    <div className="flex flex-col gap-4 mb-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card p-2 shadow-sm">
         {/* Left side: Search & basic filters */}
         <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -132,11 +132,18 @@ export function MessagesToolbar({
           {/* Advanced Filters Popover */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 gap-1.5 border-dashed">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5 border-dashed"
+              >
                 <FilterIcon className="size-4" />
                 Filters
                 {activeFiltersCount > 0 && (
-                  <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-[10px] rounded-sm">
+                  <Badge
+                    variant="secondary"
+                    className="ml-1 px-1.5 py-0.5 text-[10px] rounded-sm"
+                  >
                     {activeFiltersCount}
                   </Badge>
                 )}
@@ -146,8 +153,13 @@ export function MessagesToolbar({
               <div className="space-y-4">
                 <h4 className="font-medium leading-none">Advanced Filters</h4>
                 <FieldGroup className="grid gap-4">
-                  <Field orientation="horizontal" className="items-center justify-between gap-4">
-                    <FieldLabel htmlFor="direction" className="text-xs">Direction</FieldLabel>
+                  <Field
+                    orientation="horizontal"
+                    className="items-center justify-between gap-4"
+                  >
+                    <FieldLabel htmlFor="direction" className="text-xs">
+                      Direction
+                    </FieldLabel>
                     <Select
                       value={currentFilters.direction || "all"}
                       onValueChange={(val) => updateParam("direction", val)}
@@ -163,8 +175,13 @@ export function MessagesToolbar({
                     </Select>
                   </Field>
 
-                  <Field orientation="horizontal" className="items-center justify-between gap-4">
-                    <FieldLabel htmlFor="folderName" className="text-xs">Folder</FieldLabel>
+                  <Field
+                    orientation="horizontal"
+                    className="items-center justify-between gap-4"
+                  >
+                    <FieldLabel htmlFor="folderName" className="text-xs">
+                      Folder
+                    </FieldLabel>
                     <Select
                       value={currentFilters.folderName || "all"}
                       onValueChange={(val) => updateParam("folderName", val)}
@@ -180,8 +197,13 @@ export function MessagesToolbar({
                     </Select>
                   </Field>
 
-                  <Field orientation="horizontal" className="items-center justify-between gap-4">
-                    <FieldLabel htmlFor="searchScope" className="text-xs">Search In</FieldLabel>
+                  <Field
+                    orientation="horizontal"
+                    className="items-center justify-between gap-4"
+                  >
+                    <FieldLabel htmlFor="searchScope" className="text-xs">
+                      Search In
+                    </FieldLabel>
                     <Select
                       value={currentFilters.searchScope || "all"}
                       onValueChange={(val) => updateParam("searchScope", val)}
@@ -197,8 +219,13 @@ export function MessagesToolbar({
                     </Select>
                   </Field>
 
-                  <Field orientation="horizontal" className="items-center justify-between gap-4">
-                    <FieldLabel htmlFor="fromDate" className="text-xs">From Date</FieldLabel>
+                  <Field
+                    orientation="horizontal"
+                    className="items-center justify-between gap-4"
+                  >
+                    <FieldLabel htmlFor="fromDate" className="text-xs">
+                      From Date
+                    </FieldLabel>
                     <Input
                       id="fromDate"
                       type="date"
@@ -208,8 +235,13 @@ export function MessagesToolbar({
                     />
                   </Field>
 
-                  <Field orientation="horizontal" className="items-center justify-between gap-4">
-                    <FieldLabel htmlFor="toDate" className="text-xs">To Date</FieldLabel>
+                  <Field
+                    orientation="horizontal"
+                    className="items-center justify-between gap-4"
+                  >
+                    <FieldLabel htmlFor="toDate" className="text-xs">
+                      To Date
+                    </FieldLabel>
                     <Input
                       id="toDate"
                       type="date"
@@ -219,7 +251,7 @@ export function MessagesToolbar({
                     />
                   </Field>
                 </FieldGroup>
-                
+
                 {activeFiltersCount > 0 && (
                   <Button
                     variant="ghost"
