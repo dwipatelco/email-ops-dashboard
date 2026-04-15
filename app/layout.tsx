@@ -11,7 +11,7 @@ const publicSansHeading = Public_Sans({
   variable: "--font-heading",
 });
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Mail Monitor",
@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("font-sans", inter.variable, publicSansHeading.variable)}
+      className={cn("font-sans", geist.variable, publicSansHeading.variable)}
     >
       <body>
         <TooltipProvider>{children}</TooltipProvider>

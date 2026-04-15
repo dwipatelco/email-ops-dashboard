@@ -33,10 +33,14 @@ export function MessagesInbox({ rows }: { rows: InboxRow[] }) {
         <button
           key={row.id}
           type="button"
-          className="grid w-full min-w-0 gap-2 px-4 py-3 text-left hover:bg-muted/50 md:grid-cols-[1fr_auto]"
-          onClick={() => router.push(`/messages/${row.id}`)}
+          className="flex w-full min-w-0 flex-col gap-2 px-4 py-3 text-left hover:bg-muted/50 md:flex-row md:justify-between md:items-start"
+          onClick={() => {
+            const url = new URL(window.location.href);
+            url.searchParams.set("messageId", row.id);
+            router.push(url.pathname + url.search, { scroll: false });
+          }}
         >
-          <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 pr-4">
             <div className="flex min-w-0 items-center gap-2">
               <DirectionBadge direction={row.direction} />
               <p className="truncate text-xs text-muted-foreground">{row.mailboxEmail}</p>
@@ -46,10 +50,10 @@ export function MessagesInbox({ rows }: { rows: InboxRow[] }) {
               {row.snippet ?? row.fromText ?? row.toText ?? "-"}
             </p>
           </div>
-          <div className="flex min-w-0 flex-col items-end gap-1">
+          <div className="flex w-full md:w-auto md:max-w-[250px] lg:max-w-[350px] shrink-0 flex-col md:items-end gap-1 mt-2 md:mt-0">
             <p className="text-xs text-muted-foreground">{formatRelativeDate(row.receivedAt)}</p>
-            <p className="truncate text-xs text-muted-foreground">From: {row.fromText || "-"}</p>
-            <p className="truncate text-xs text-muted-foreground">To: {row.toText || "-"}</p>
+            <p className="max-w-full truncate text-xs text-muted-foreground md:text-right">From: {row.fromText || "-"}</p>
+            <p className="max-w-full truncate text-xs text-muted-foreground md:text-right">To: {row.toText || "-"}</p>
           </div>
         </button>
       ))}
