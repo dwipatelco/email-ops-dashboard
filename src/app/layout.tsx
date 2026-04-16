@@ -6,6 +6,17 @@ import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
+let workerStarted = false;
+
+if (!workerStarted && process.env.NODE_ENV === "production") {
+  workerStarted = true;
+  import("../../worker/index").then(() => {
+    console.log("Worker started");
+  }).catch((err: Error) => {
+    console.error("Worker failed to start", err);
+  });
+}
+
 const publicSansHeading = Public_Sans({
   subsets: ["latin"],
   variable: "--font-heading",

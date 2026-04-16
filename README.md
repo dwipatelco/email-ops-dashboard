@@ -6,7 +6,7 @@ Internal operations dashboard for monitoring incoming/outgoing company email tra
 
 - Next.js App Router (`/app`) for UI and server routes
 - PostgreSQL + Prisma for persistence
-- Separate worker process for IMAP polling and sync
+- Worker runs inside Next.js process (production mode)
 - Tailwind CSS + lightweight UI primitives
 - TanStack React Table for the message explorer
 - SSE endpoint for near-realtime UI refresh
@@ -40,10 +40,12 @@ EVENTS_POLL_INTERVAL_MS=3000
 pnpm install
 pnpm prisma:generate
 pnpm dev
-pnpm worker
 pnpm build
+pnpm start
 pnpm test
 ```
+
+**Note:** In development (`pnpm dev`), the worker doesn't run. Use `pnpm dev` for UI testing, or set `NODE_ENV=production` to test the full stack.
 
 ## Docker / Dokploy
 
@@ -53,25 +55,16 @@ Build image:
 docker build -t monitor-email .
 ```
 
-Run web app (default role):
+Run container:
 
 ```bash
 docker run --rm -p 3000:3000 --env-file .env monitor-email
 ```
 
-Run worker from the same image:
-
-```bash
-docker run --rm --env-file .env -e APP_ROLE=worker monitor-email
-```
-
-For Dokploy, deploy two services from the same `Dockerfile`:
-
-- `web` service: `APP_ROLE=web` (or omit it)
-- `worker` service: `APP_ROLE=worker`
+For Dokploy, deploy a single service. The worker runs inside the Next.js process automatically.
 
 ## Notes
 
-- The web app and worker both use the same Prisma models and database.
-- `pnpm worker` requires a reachable Postgres instance and valid mailbox IMAP credentials.
+- The worker runs inside the Next.js process in production mode only.
+- Worker requires a reachable Postgres instance and valid mailbox IMAP credentials.
 - Outgoing visibility depends on mailbox clients writing sent mail into `Sent`.

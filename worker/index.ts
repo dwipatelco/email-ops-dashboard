@@ -59,3 +59,5 @@ loop().catch((error) => {
   console.error("Worker crashed", error);
   process.exit(1);
 });
+
+export { loop };

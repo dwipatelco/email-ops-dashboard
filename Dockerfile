@@ -25,8 +25,5 @@ WORKDIR /app
 
 COPY --from=build /app /app
 
-RUN printf '#!/bin/sh\nset -e\nif [ "${APP_ROLE:-web}" = "worker" ]; then\n  exec pnpm worker\nfi\nexec pnpm start\n' > /usr/local/bin/start-app \
-  && chmod +x /usr/local/bin/start-app
-
 EXPOSE 3000
-CMD ["start-app"]
+CMD ["pnpm", "start"]
