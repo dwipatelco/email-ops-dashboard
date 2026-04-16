@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { resolveMessageQuery } from "../src/lib/server/data.js";
+import { resolveMessageQuery } from "../src/app/(app)/messages/queries";
 
 describe("message query resolution", () => {
   test("applies defaults for invalid values", () => {

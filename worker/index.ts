@@ -7,18 +7,7 @@ let isTicking = false;
 async function ensureScheduledJobs() {
   const mailboxes = await prisma.mailbox.findMany({ select: { id: true } });
   for (const mailbox of mailboxes) {
-    const existing = await prisma.syncJob.findFirst({
-      where: {
-        mailboxId: mailbox.id,
-        status: {
-          in: ["queued", "running"]
-        }
-      }
-    });
-
-    if (!existing) {
-      await queueMailboxSync(mailbox.id, "scheduled");
-    }
+    await queueMailboxSync(mailbox.id, "scheduled");
   }
 }
 

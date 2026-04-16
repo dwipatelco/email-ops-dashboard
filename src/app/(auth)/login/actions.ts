@@ -31,6 +31,7 @@ export async function loginAction(formData: FormData) {
     name: "monitor_email_session",
     value: token,
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     sameSite: "lax",
     maxAge: 60 * 60 * 24
@@ -43,6 +44,7 @@ export async function logoutAction() {
   const cookieStore = await cookies();
   cookieStore.set("monitor_email_session", "", {
     httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     sameSite: "lax",
     maxAge: 0

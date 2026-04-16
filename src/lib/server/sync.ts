@@ -15,6 +15,11 @@ const FOLDERS: FolderPlan[] = [
   { folderName: "Sent", direction: "outgoing" }
 ];
 
+type ClaimedSyncJob = {
+  id: string;
+  mailboxId: string;
+};
+
 function toJson(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
 }
@@ -68,35 +73,60 @@ function formatSyncError(error: unknown, context?: string): string {
   return `${prefix}${message} (${details.join(", ")})`;
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002"
+  );
+}
+
 export async function queueMailboxSync(mailboxId: string, reason: string) {
-  return await prisma.syncJob.create({
-    data: {
-      mailboxId,
-      reason,
-      status: "queued"
+  try {
+    return await prisma.syncJob.create({
+      data: {
+        mailboxId,
+        reason,
+        status: "queued"
+      }
+    });
+  } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return null;
     }
-  });
+
+    throw error;
+  }
+}
+
+export async function claimNextQueuedSyncJob(): Promise<ClaimedSyncJob | null> {
+  const claimed = await prisma.$queryRaw<ClaimedSyncJob[]>`
+    WITH claim AS (
+      SELECT id
+      FROM "SyncJob"
+      WHERE status = 'queued'::"SyncJobStatus"
+      ORDER BY "createdAt" ASC
+      LIMIT 1
+      FOR UPDATE SKIP LOCKED
+    )
+    UPDATE "SyncJob"
+    SET status = 'running'::"SyncJobStatus", "startedAt" = NOW()
+    WHERE id = (SELECT id FROM claim)
+    RETURNING id, "mailboxId";
+  `;
+
+  return claimed[0] ?? null;
 }
 
 export async function processSyncQueue(options?: { createClient?: typeof createImapClient }) {
   const createClient = options?.createClient ?? createImapClient;
 
-  const job = await prisma.syncJob.findFirst({
-    where: { status: "queued" },
-    orderBy: { createdAt: "asc" }
-  });
+  const job = await claimNextQueuedSyncJob();
 
   if (!job) {
     return false;
   }
-
-  await prisma.syncJob.update({
-    where: { id: job.id },
-    data: {
-      status: "running",
-      startedAt: new Date()
-    }
-  });
 
   try {
     await syncMailbox(job.mailboxId, createClient);

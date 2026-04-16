@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { buildDashboardSummary } from "../src/lib/server/dashboard.js";
+import { buildDashboardSummary } from "../src/app/(app)/dashboard/queries";
 
 describe("dashboard summary", () => {
   test("aggregates mailbox health and traffic counts", () => {

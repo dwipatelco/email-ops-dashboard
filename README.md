@@ -34,6 +34,11 @@ SYNC_POLL_INTERVAL_MS=60000
 EVENTS_POLL_INTERVAL_MS=3000
 ```
 
+Production runtime rejects placeholder values for `APP_ENCRYPTION_KEY`, `ADMIN_PASSWORD`, and `SESSION_SECRET`.
+Polling intervals must be positive integers with minimum values:
+- `SYNC_POLL_INTERVAL_MS >= 5000`
+- `EVENTS_POLL_INTERVAL_MS >= 1000`
+
 ## Commands
 
 ```bash

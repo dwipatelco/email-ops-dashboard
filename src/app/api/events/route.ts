@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { countEventsVersion } from "@/app/(app)/system/queries";
 import { env } from "@/lib/server/env";
+import { getSession } from "@/lib/server/session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
