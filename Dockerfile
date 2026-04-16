@@ -9,6 +9,7 @@ WORKDIR /app
 
 FROM base AS build
 
+ENV DATABASE_URL="postgresql://placeholder:placeholder@placeholder:5432/placeholder"
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
