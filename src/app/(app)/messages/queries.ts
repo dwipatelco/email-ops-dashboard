@@ -11,7 +11,7 @@ export type ResolvedMessageQuery = {
 };
 
 type MessageFilterInput = {
-  mailboxId?: string;
+  mailboxIds?: string[];
   direction?: MailDirection;
   folderName?: "Inbox" | "Sent";
   searchScope?: "all" | "subject" | "body";
@@ -27,6 +27,20 @@ type MessageFilterInput = {
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
+
+export function normalizeMailboxIds(
+  value: string | string[] | undefined,
+): string[] | undefined {
+  const values = (Array.isArray(value) ? value : [value])
+    .map((entry) => entry?.trim() ?? "")
+    .filter(Boolean);
+
+  if (values.length === 0) {
+    return undefined;
+  }
+
+  return Array.from(new Set(values));
+}
 
 function clampPage(value: number | undefined) {
   if (!value || Number.isNaN(value) || value < 1) {
@@ -136,8 +150,8 @@ function buildOrderBySql(sortBy: MessageSortBy, sortDir: MessageSortDir) {
 function buildRawWhereClauses(filters: MessageFilterInput): Prisma.Sql[] {
   const clauses: Prisma.Sql[] = [];
 
-  if (filters.mailboxId) {
-    clauses.push(Prisma.sql`m."mailboxId" = ${filters.mailboxId}`);
+  if (filters.mailboxIds?.length) {
+    clauses.push(Prisma.sql`m."mailboxId" IN (${Prisma.join(filters.mailboxIds)})`);
   }
   if (filters.direction) {
     clauses.push(Prisma.sql`m.direction = ${filters.direction}::"MailDirection"`);
@@ -277,8 +291,8 @@ export async function getMessages(filters: MessageFilterInput) {
 
   const where: Prisma.MessageWhereInput = {};
 
-  if (filters.mailboxId) {
-    where.mailboxId = filters.mailboxId;
+  if (filters.mailboxIds?.length) {
+    where.mailboxId = { in: filters.mailboxIds };
   }
 
   if (filters.direction) {

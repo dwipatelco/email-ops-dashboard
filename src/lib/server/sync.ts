@@ -21,6 +21,32 @@ type ClaimedSyncJob = {
   mailboxId: string;
 };
 
+type StaleReapResult = {
+  reapedCount: number;
+  retriedCount: number;
+};
+
+class SyncTimeoutError extends Error {
+  code = "SYNC_TIMEOUT";
+  command: string;
+
+  constructor(command: string, timeoutMs: number) {
+    super(`Operation timed out after ${timeoutMs}ms`);
+    this.name = "SyncTimeoutError";
+    this.command = command;
+  }
+}
+
+class SyncCancelledError extends Error {
+  code = "SYNC_CANCELLED";
+  command = "sync-cancelled";
+
+  constructor(reason = "reason=manual-stop") {
+    super(`Sync job was cancelled (${reason})`);
+    this.name = "SyncCancelledError";
+  }
+}
+
 function toJson(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
 }
@@ -83,6 +109,33 @@ function isUniqueConstraintError(error: unknown): boolean {
   );
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, command: string): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout | undefined;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      reject(new SyncTimeoutError(command, timeoutMs));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+  }
+}
+
+function formatDurationMs(ms: number): string {
+  if (ms < 1000) {
+    return `${ms}ms`;
+  }
+
+  const seconds = Math.floor(ms / 1000);
+  return `${seconds}s`;
+}
+
 export async function queueMailboxSync(mailboxId: string, reason: string) {
   try {
     return await prisma.syncJob.create({
@@ -127,6 +180,83 @@ export async function scheduleQueuedSyncJobsForAllMailboxes() {
   return inserted.count;
 }
 
+export async function reapStaleRunningJobs(now: Date = new Date()): Promise<StaleReapResult> {
+  const cutoff = new Date(now.getTime() - env.SYNC_JOB_STALE_TIMEOUT_MS);
+
+  const staleJobs = await prisma.syncJob.findMany({
+    where: {
+      status: "running",
+      startedAt: { lte: cutoff }
+    },
+    select: {
+      id: true,
+      mailboxId: true,
+      startedAt: true
+    }
+  });
+
+  if (staleJobs.length === 0) {
+    return { reapedCount: 0, retriedCount: 0 };
+  }
+
+  let reapedCount = 0;
+  let retriedCount = 0;
+
+  for (const staleJob of staleJobs) {
+    const startedAt = staleJob.startedAt ?? cutoff;
+    const ageMs = Math.max(now.getTime() - startedAt.getTime(), 0);
+    const reason = `reason=stale-running-timeout age=${formatDurationMs(ageMs)}`;
+    const staleMessage = `Sync job exceeded timeout window (${reason})`;
+
+    const updated = await prisma.syncJob.updateMany({
+      where: {
+        id: staleJob.id,
+        status: "running"
+      },
+      data: {
+        status: "failed",
+        finishedAt: now,
+        error: staleMessage
+      }
+    });
+
+    if (updated.count === 0) {
+      continue;
+    }
+
+    reapedCount += 1;
+
+    await prisma.syncRun.updateMany({
+      where: {
+        mailboxId: staleJob.mailboxId,
+        status: "running",
+        startedAt: { lte: cutoff }
+      },
+      data: {
+        status: "error",
+        finishedAt: now,
+        errorMessage: staleMessage
+      }
+    });
+
+    await prisma.mailbox.update({
+      where: { id: staleJob.mailboxId },
+      data: {
+        status: "error",
+        lastSyncFinishedAt: now,
+        lastSyncError: staleMessage
+      }
+    });
+
+    const retryJob = await queueMailboxSync(staleJob.mailboxId, "retry-stale-timeout");
+    if (retryJob) {
+      retriedCount += 1;
+    }
+  }
+
+  return { reapedCount, retriedCount };
+}
+
 export async function claimNextQueuedSyncJob(): Promise<ClaimedSyncJob | null> {
   const claimed = await prisma.$queryRaw<ClaimedSyncJob[]>`
     WITH claim AS (
@@ -156,9 +286,9 @@ export async function processSyncQueue(options?: { createClient?: typeof createI
   }
 
   try {
-    await syncMailbox(job.mailboxId, createClient);
-    await prisma.syncJob.update({
-      where: { id: job.id },
+    await syncMailbox(job.mailboxId, createClient, { jobId: job.id });
+    await prisma.syncJob.updateMany({
+      where: { id: job.id, status: "running" },
       data: {
         status: "completed",
         finishedAt: new Date()
@@ -166,8 +296,8 @@ export async function processSyncQueue(options?: { createClient?: typeof createI
     });
   } catch (error) {
     const message = formatSyncError(error, "Sync queue job failed");
-    await prisma.syncJob.update({
-      where: { id: job.id },
+    await prisma.syncJob.updateMany({
+      where: { id: job.id, status: "running" },
       data: {
         status: "failed",
         finishedAt: new Date(),
@@ -181,7 +311,8 @@ export async function processSyncQueue(options?: { createClient?: typeof createI
 
 export async function syncMailbox(
   mailboxId: string,
-  createClient: typeof createImapClient = createImapClient
+  createClient: typeof createImapClient = createImapClient,
+  options?: { jobId?: string }
 ): Promise<void> {
   const mailbox = await prisma.mailbox.findUnique({ where: { id: mailboxId } });
   if (!mailbox) {
@@ -206,6 +337,21 @@ export async function syncMailbox(
 
   let client: ImapMailboxClient | null = null;
 
+  const ensureNotCancelled = async () => {
+    if (!options?.jobId) {
+      return;
+    }
+
+    const job = await prisma.syncJob.findUnique({
+      where: { id: options.jobId },
+      select: { status: true }
+    });
+
+    if (!job || job.status !== "running") {
+      throw new SyncCancelledError();
+    }
+  };
+
   try {
     let password: string;
     try {
@@ -216,25 +362,37 @@ export async function syncMailbox(
       );
     }
 
-    client = await createClient({
-      host: mailbox.host,
-      port: mailbox.port,
-      secure: mailbox.secure,
-      username: mailbox.username,
-      password
-    });
+    client = await withTimeout(
+      createClient({
+        host: mailbox.host,
+        port: mailbox.port,
+        secure: mailbox.secure,
+        username: mailbox.username,
+        password,
+        commandTimeoutMs: env.IMAP_COMMAND_TIMEOUT_MS
+      }),
+      env.IMAP_COMMAND_TIMEOUT_MS,
+      "imap-connect"
+    );
 
     let incomingCount = 0;
     let outgoingCount = 0;
 
     for (const folder of FOLDERS) {
-      const count = await syncFolder(mailboxId, folder, client);
+      await ensureNotCancelled();
+      const count = await withTimeout(
+        syncFolder(mailboxId, folder, client),
+        env.IMAP_COMMAND_TIMEOUT_MS,
+        `imap-sync-folder-${folder.folderName}`
+      );
       if (folder.direction === "incoming") {
         incomingCount += count;
       } else {
         outgoingCount += count;
       }
     }
+
+    await ensureNotCancelled();
 
     await prisma.syncRun.update({
       where: { id: run.id },
@@ -381,6 +539,59 @@ export async function recordWorkerHeartbeat(currentState: string) {
       lastSeenAt: new Date()
     }
   });
+}
+
+export async function stopRunningSyncJob(jobId: string) {
+  const job = await prisma.syncJob.findUnique({
+    where: { id: jobId },
+    select: { id: true, mailboxId: true, status: true }
+  });
+
+  if (!job || job.status !== "running") {
+    return { stopped: false as const };
+  }
+
+  const now = new Date();
+  const stopMessage = "Stopped by admin (reason=manual-stop)";
+
+  const updated = await prisma.syncJob.updateMany({
+    where: {
+      id: job.id,
+      status: "running"
+    },
+    data: {
+      status: "failed",
+      finishedAt: now,
+      error: stopMessage
+    }
+  });
+
+  if (updated.count === 0) {
+    return { stopped: false as const };
+  }
+
+  await prisma.syncRun.updateMany({
+    where: {
+      mailboxId: job.mailboxId,
+      status: "running"
+    },
+    data: {
+      status: "error",
+      finishedAt: now,
+      errorMessage: stopMessage
+    }
+  });
+
+  await prisma.mailbox.update({
+    where: { id: job.mailboxId },
+    data: {
+      status: "error",
+      lastSyncFinishedAt: now,
+      lastSyncError: stopMessage
+    }
+  });
+
+  return { stopped: true as const, mailboxId: job.mailboxId };
 }
 
 export function mapJobStatusToSyncState(status: SyncJobStatus): "queued" | "running" | "done" {

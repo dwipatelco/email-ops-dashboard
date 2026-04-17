@@ -1,5 +1,4 @@
 import { MailDirection } from "@/generated/prisma/client";
-import Link from "next/link";
 
 import { MessagesInbox } from "./_components/messages-inbox";
 import { MessagesTable } from "./_components/messages-table";
@@ -24,6 +23,7 @@ import {
 import {
   getMessages,
   getMessageDetail,
+  normalizeMailboxIds,
   type MessageSortBy,
   type MessageSortDir,
 } from "@/app/(app)/messages/queries";
@@ -33,6 +33,7 @@ import { sanitizeEmailHtml } from "@/lib/server/sanitize";
 export const dynamic = "force-dynamic";
 
 type ViewMode = "table" | "inbox";
+type SearchParamValue = string | string[] | undefined;
 
 function toInt(value: string | undefined, fallback: number) {
   const parsed = Number(value);
@@ -47,36 +48,43 @@ function getViewMode(value: string | undefined): ViewMode {
   return value === "inbox" ? "inbox" : "table";
 }
 
+function getSingleParam(value: SearchParamValue) {
+  return Array.isArray(value) ? value.at(-1) : value;
+}
+
+function getFolderName(value: string | undefined): "Inbox" | "Sent" | undefined {
+  return value === "Inbox" || value === "Sent" ? value : undefined;
+}
+
+function getSearchScope(value: string | undefined): "all" | "subject" | "body" | undefined {
+  return value === "subject" || value === "body" || value === "all"
+    ? value
+    : undefined;
+}
+
 export default async function MessagesPage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | undefined>>;
+  searchParams: Promise<Record<string, SearchParamValue>>;
 }) {
   const params = await searchParams;
-  const page = toInt(params.page, 1);
-  const pageSize = Math.min(toInt(params.pageSize, 50), 100);
-  const view = getViewMode(params.view);
+  const mailboxIds = normalizeMailboxIds(params.mailboxId);
+  const page = toInt(getSingleParam(params.page), 1);
+  const pageSize = Math.min(toInt(getSingleParam(params.pageSize), 50), 100);
+  const view = getViewMode(getSingleParam(params.view));
 
   const filters = {
-    mailboxId: params.mailboxId,
-    direction: (params.direction as MailDirection | undefined) ?? undefined,
-    folderName:
-      params.folderName === "Inbox" || params.folderName === "Sent"
-        ? params.folderName
-        : undefined,
-    searchScope:
-      params.searchScope === "subject" ||
-      params.searchScope === "body" ||
-      params.searchScope === "all"
-        ? params.searchScope
-        : undefined,
-    search: params.search,
-    fromDate: params.fromDate,
-    toDate: params.toDate,
+    mailboxIds,
+    direction: (getSingleParam(params.direction) as MailDirection | undefined) ?? undefined,
+    folderName: getFolderName(getSingleParam(params.folderName)),
+    searchScope: getSearchScope(getSingleParam(params.searchScope)),
+    search: getSingleParam(params.search),
+    fromDate: getSingleParam(params.fromDate),
+    toDate: getSingleParam(params.toDate),
     page,
     pageSize,
-    sortBy: params.sortBy as MessageSortBy | undefined,
-    sortDir: params.sortDir === "asc" ? "asc" : "desc",
+    sortBy: getSingleParam(params.sortBy) as MessageSortBy | undefined,
+    sortDir: getSingleParam(params.sortDir) === "asc" ? "asc" : "desc",
   } as const;
 
   const data = await getMessages(filters);
@@ -86,7 +94,7 @@ export default async function MessagesPage({
     data.total === 0 ? 0 : Math.min(data.page * data.pageSize, data.total);
 
   // Quick view sheet fetching
-  const quickViewMessageId = params.messageId;
+  const quickViewMessageId = getSingleParam(params.messageId);
   let quickViewMessage: MessageQuickViewDetail | null = null;
   let sanitizedHtmlBody = null;
 
@@ -97,19 +105,36 @@ export default async function MessagesPage({
     }
   }
 
-  function buildUrl(next: Record<string, string | undefined>) {
+  function buildUrl(next: Record<string, string | string[] | undefined>) {
     const query = new URLSearchParams();
 
     for (const [key, value] of Object.entries(params)) {
       if (!value) {
         continue;
       }
+
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          if (item) {
+            query.append(key, item);
+          }
+        }
+        continue;
+      }
+
       query.set(key, value);
     }
 
     for (const [key, value] of Object.entries(next)) {
       if (!value) {
         query.delete(key);
+      } else if (Array.isArray(value)) {
+        query.delete(key);
+        for (const item of value) {
+          if (item) {
+            query.append(key, item);
+          }
+        }
       } else {
         query.set(key, value);
       }
@@ -150,13 +175,13 @@ export default async function MessagesPage({
       <MessagesToolbar
         mailboxes={data.mailboxes}
         currentFilters={{
-          mailboxId: params.mailboxId,
-          direction: params.direction,
-          folderName: params.folderName,
-          searchScope: params.searchScope,
-          search: params.search,
-          fromDate: params.fromDate,
-          toDate: params.toDate,
+          mailboxIds,
+          direction: getSingleParam(params.direction),
+          folderName: getSingleParam(params.folderName),
+          searchScope: getSingleParam(params.searchScope),
+          search: getSingleParam(params.search),
+          fromDate: getSingleParam(params.fromDate),
+          toDate: getSingleParam(params.toDate),
           pageSize: String(pageSize),
           view: view,
         }}

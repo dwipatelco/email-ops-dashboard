@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { RefreshCwIcon } from "lucide-react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -53,6 +56,23 @@ export function SystemTabs({
   isRefreshing,
   fetchData,
 }: SystemTabsProps) {
+  const [stoppingJobId, setStoppingJobId] = useState<string | null>(null);
+
+  const stopJob = async (jobId: string) => {
+    try {
+      setStoppingJobId(jobId);
+      const response = await fetch(`/api/system/jobs/${jobId}/stop`, { method: "POST" });
+      if (!response.ok) {
+        throw new Error("Failed to stop job");
+      }
+      await fetchData();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setStoppingJobId(null);
+    }
+  };
+
   return (
     <>
       {/* Toolbar (Filters and View Toggle) */}
@@ -168,7 +188,7 @@ export function SystemTabs({
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {activeTab === "jobs" ? (
-            <SyncJobsTable jobs={data.jobs} />
+            <SyncJobsTable jobs={data.jobs} stoppingJobId={stoppingJobId} onStopJob={stopJob} />
           ) : (
             <SyncRunsTable runs={data.runs} />
           )}

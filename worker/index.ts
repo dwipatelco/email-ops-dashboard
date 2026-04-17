@@ -1,10 +1,12 @@
 import { env } from "../src/lib/server/env";
-import { processSyncQueue, recordWorkerHeartbeat, scheduleQueuedSyncJobsForAllMailboxes } from "../src/lib/server/sync";
+import { processSyncQueue, reapStaleRunningJobs, recordWorkerHeartbeat, scheduleQueuedSyncJobsForAllMailboxes } from "../src/lib/server/sync";
 
 let isTicking = false;
 
 async function ensureScheduledJobs() {
-  await scheduleQueuedSyncJobsForAllMailboxes();
+  const stale = await reapStaleRunningJobs();
+  const scheduledCount = await scheduleQueuedSyncJobsForAllMailboxes();
+  return { stale, scheduledCount };
 }
 
 async function tick() {
@@ -15,14 +17,16 @@ async function tick() {
   isTicking = true;
   await recordWorkerHeartbeat("tick-start");
   try {
-    await ensureScheduledJobs();
+    const { stale, scheduledCount } = await ensureScheduledJobs();
 
     let processed = true;
     while (processed) {
       processed = await processSyncQueue();
     }
 
-    await recordWorkerHeartbeat("idle");
+    await recordWorkerHeartbeat(
+      `idle(staleReaped=${stale.reapedCount}, staleRetried=${stale.retriedCount}, scheduled=${scheduledCount})`
+    );
   } finally {
     isTicking = false;
   }

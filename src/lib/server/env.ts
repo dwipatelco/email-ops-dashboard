@@ -9,7 +9,9 @@ const DEV_DEFAULTS = {
   ADMIN_PASSWORD: "placeholder",
   SESSION_SECRET: "placeholderSecret123",
   SYNC_POLL_INTERVAL_MS: 60000,
-  EVENTS_POLL_INTERVAL_MS: 3000
+  EVENTS_POLL_INTERVAL_MS: 3000,
+  SYNC_JOB_STALE_TIMEOUT_MS: 600000,
+  IMAP_COMMAND_TIMEOUT_MS: 120000
 } as const;
 
 const isBuildPhase =
@@ -24,7 +26,9 @@ const envSchema = z.object({
   ADMIN_PASSWORD: z.string().min(1).default(DEV_DEFAULTS.ADMIN_PASSWORD),
   SESSION_SECRET: z.string().min(12).default(DEV_DEFAULTS.SESSION_SECRET),
   SYNC_POLL_INTERVAL_MS: z.coerce.number().int().min(5000).default(DEV_DEFAULTS.SYNC_POLL_INTERVAL_MS),
-  EVENTS_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).default(DEV_DEFAULTS.EVENTS_POLL_INTERVAL_MS)
+  EVENTS_POLL_INTERVAL_MS: z.coerce.number().int().min(1000).default(DEV_DEFAULTS.EVENTS_POLL_INTERVAL_MS),
+  SYNC_JOB_STALE_TIMEOUT_MS: z.coerce.number().int().min(60000).default(DEV_DEFAULTS.SYNC_JOB_STALE_TIMEOUT_MS),
+  IMAP_COMMAND_TIMEOUT_MS: z.coerce.number().int().min(5000).default(DEV_DEFAULTS.IMAP_COMMAND_TIMEOUT_MS)
 });
 
 const parsed = envSchema.safeParse(process.env);

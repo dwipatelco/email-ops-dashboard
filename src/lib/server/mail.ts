@@ -62,6 +62,7 @@ export async function createImapClient(options: {
   secure: boolean;
   username: string;
   password: string;
+  commandTimeoutMs: number;
 }): Promise<ImapMailboxClient> {
   const client = new ImapFlow({
     host: options.host,
@@ -71,13 +72,29 @@ export async function createImapClient(options: {
       user: options.username,
       pass: options.password
     },
+    socketTimeout: options.commandTimeoutMs,
     logger: false
+  });
+
+  let connectionError: Error | null = null;
+  client.on("error", (error) => {
+    connectionError = error instanceof Error ? error : new Error(String(error));
+    console.error("IMAP connection error", {
+      message: connectionError.message,
+      code: (error as { code?: unknown })?.code,
+      host: options.host,
+      username: options.username,
+    });
   });
 
   await client.connect();
 
   return {
     async listMessages(folderName, afterUid) {
+      if (connectionError) {
+        throw connectionError;
+      }
+
       const mailbox = await client.mailboxOpen(folderName, { readOnly: true });
       const uidNext = mailbox.uidNext ?? 1;
 
@@ -113,6 +130,10 @@ export async function createImapClient(options: {
       return messages;
     },
     async close() {
+      if (connectionError) {
+        return;
+      }
+
       await client.logout();
     }
   };

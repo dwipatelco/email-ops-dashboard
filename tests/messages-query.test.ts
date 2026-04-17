@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { resolveMessageQuery } from "../src/app/(app)/messages/queries";
+import {
+  normalizeMailboxIds,
+  resolveMessageQuery,
+} from "../src/app/(app)/messages/queries";
 
 describe("message query resolution", () => {
   test("applies defaults for invalid values", () => {
@@ -44,5 +47,17 @@ describe("message query resolution", () => {
     });
 
     expect(result.pageSize).toBe(100);
+  });
+
+  test("normalizes repeated mailbox ids into a unique list", () => {
+    expect(
+      normalizeMailboxIds(["mailbox-2", "mailbox-1", "mailbox-2", ""])
+    ).toEqual(["mailbox-2", "mailbox-1"]);
+  });
+
+  test("returns undefined when mailbox ids are empty", () => {
+    expect(normalizeMailboxIds(undefined)).toBeUndefined();
+    expect(normalizeMailboxIds("")).toBeUndefined();
+    expect(normalizeMailboxIds(["", "   "])).toBeUndefined();
   });
 });

@@ -1,9 +1,8 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState, useTransition, useEffect, useRef } from "react";
-import { SearchIcon, XIcon, FilterIcon } from "lucide-react";
-import { MailDirection } from "@/generated/prisma/client";
+import { useCallback, useEffect, useState, useTransition } from "react";
+import { ChevronDownIcon, FilterIcon, SearchIcon, XIcon } from "lucide-react";
 
 import {
   Select,
@@ -22,6 +21,13 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function MessagesToolbar({
   mailboxes,
@@ -29,7 +35,7 @@ export function MessagesToolbar({
 }: {
   mailboxes: { id: string; email: string }[];
   currentFilters: {
-    mailboxId?: string;
+    mailboxIds?: string[];
     direction?: string;
     folderName?: string;
     searchScope?: string;
@@ -46,9 +52,16 @@ export function MessagesToolbar({
   const [isPending, startTransition] = useTransition();
 
   const [searchValue, setSearchValue] = useState(currentFilters.search || "");
+  const [selectedMailboxIds, setSelectedMailboxIds] = useState(
+    currentFilters.mailboxIds ?? [],
+  );
+
+  useEffect(() => {
+    setSelectedMailboxIds(currentFilters.mailboxIds ?? []);
+  }, [currentFilters.mailboxIds]);
 
   const activeFiltersCount = [
-    currentFilters.mailboxId,
+    selectedMailboxIds.length > 0 ? "mailboxes" : undefined,
     currentFilters.direction,
     currentFilters.folderName,
     currentFilters.fromDate,
@@ -74,6 +87,51 @@ export function MessagesToolbar({
     },
     [pathname, router, searchParams],
   );
+
+  const updateMailboxParams = useCallback(
+    (mailboxIds: string[]) => {
+      const params = new URLSearchParams(searchParams);
+      const uniqueMailboxIds = Array.from(
+        new Set(mailboxIds.map((value) => value.trim()).filter(Boolean)),
+      );
+      const shouldResetToAll =
+        uniqueMailboxIds.length === 0 || uniqueMailboxIds.length === mailboxes.length;
+
+      params.delete("mailboxId");
+
+      if (!shouldResetToAll) {
+        for (const mailboxId of uniqueMailboxIds) {
+          params.append("mailboxId", mailboxId);
+        }
+      }
+
+      params.set("page", "1");
+
+      startTransition(() => {
+        router.push(`${pathname}?${params.toString()}`);
+      });
+    },
+    [mailboxes.length, pathname, router, searchParams],
+  );
+
+  const toggleMailbox = useCallback(
+    (mailboxId: string) => {
+      const nextMailboxIds = selectedMailboxIds.includes(mailboxId)
+        ? selectedMailboxIds.filter((value) => value !== mailboxId)
+        : [...selectedMailboxIds, mailboxId];
+
+      setSelectedMailboxIds(nextMailboxIds);
+      updateMailboxParams(nextMailboxIds);
+    },
+    [selectedMailboxIds, updateMailboxParams],
+  );
+
+  const mailboxLabel =
+    selectedMailboxIds.length === 0
+      ? "All mailboxes"
+      : selectedMailboxIds.length === 1
+        ? mailboxes.find((mailbox) => mailbox.id === selectedMailboxIds[0])?.email ?? "1 selected"
+        : `${selectedMailboxIds.length} selected`;
 
   // Debounce search input
   useEffect(() => {
@@ -112,22 +170,39 @@ export function MessagesToolbar({
           </div>
 
           {/* Mailbox Filter */}
-          <Select
-            value={currentFilters.mailboxId || "all"}
-            onValueChange={(val) => updateParam("mailboxId", val)}
-          >
-            <SelectTrigger className="h-9 w-[180px]">
-              <SelectValue placeholder="All mailboxes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All mailboxes</SelectItem>
-              {mailboxes.map((mailbox) => (
-                <SelectItem key={mailbox.id} value={mailbox.id}>
-                  {mailbox.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-9 min-w-[180px] justify-between"
+                disabled={isPending}
+              >
+                <span className="truncate">{mailboxLabel}</span>
+                <div className="flex items-center gap-2">
+                  {selectedMailboxIds.length > 1 && (
+                    <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px]">
+                      {selectedMailboxIds.length}
+                    </Badge>
+                  )}
+                  <ChevronDownIcon />
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-64">
+              <DropdownMenuGroup>
+                {mailboxes.map((mailbox) => (
+                  <DropdownMenuCheckboxItem
+                    key={mailbox.id}
+                    checked={selectedMailboxIds.includes(mailbox.id)}
+                    onCheckedChange={() => toggleMailbox(mailbox.id)}
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    <span className="truncate">{mailbox.email}</span>
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Advanced Filters Popover */}
           <Popover>

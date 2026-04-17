@@ -2,6 +2,7 @@ import { formatDistanceToNow } from "date-fns";
 import { InboxIcon } from "lucide-react";
 
 import { SyncJobStatusBadge } from "@/components/shared/status-badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -21,9 +22,11 @@ import { SystemJobRow } from "./types";
 
 interface SyncJobsTableProps {
   jobs: SystemJobRow[];
+  stoppingJobId: string | null;
+  onStopJob: (jobId: string) => void;
 }
 
-export function SyncJobsTable({ jobs }: SyncJobsTableProps) {
+export function SyncJobsTable({ jobs, stoppingJobId, onStopJob }: SyncJobsTableProps) {
   if (jobs.length === 0) {
     return (
       <div className="p-6">
@@ -52,6 +55,7 @@ export function SyncJobsTable({ jobs }: SyncJobsTableProps) {
             <TableHead>Reason</TableHead>
             <TableHead>Created</TableHead>
             <TableHead>Error</TableHead>
+            <TableHead className="w-[92px] text-right">Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -69,6 +73,20 @@ export function SyncJobsTable({ jobs }: SyncJobsTableProps) {
               </TableCell>
               <TableCell className="max-w-[48ch] whitespace-normal break-words text-muted-foreground text-xs">
                 {job.error ?? "-"}
+              </TableCell>
+              <TableCell className="text-right">
+                {job.status === "running" ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={stoppingJobId === job.id}
+                    onClick={() => onStopJob(job.id)}
+                  >
+                    {stoppingJobId === job.id ? "Stopping..." : "Stop"}
+                  </Button>
+                ) : (
+                  "-"
+                )}
               </TableCell>
             </TableRow>
           ))}
