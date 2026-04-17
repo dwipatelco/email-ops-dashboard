@@ -289,7 +289,11 @@ export async function createImapClient(options: {
       });
       let seen = 0;
 
-      for await (const rawMessage of client.fetch(batch.range, { uid: true, source: true, internalDate: true })) {
+      for await (const rawMessage of client.fetch(
+        batch.range,
+        { uid: true, source: true, internalDate: true },
+        { uid: true },
+      )) {
         if (!rawMessage.source) {
           continue;
         }
